@@ -1,201 +1,225 @@
--- =========================
--- SERVICES
--- =========================
+-- astrxl-taxedU
+-- light purple edition
+-- XENO safe
+-- delayed instant steal TP (4s)
+
+repeat task.wait() until game:IsLoaded()
 
 local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
+local ProximityPromptService = game:GetService("ProximityPromptService")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
+local PhysicsService = game:GetService("PhysicsService")
+local CoreGui = game:GetService("CoreGui")
 
--- =========================
--- SAFE FFLAG SYSTEM (XENO FIX)
--- =========================
+local player = Players.LocalPlayer
+repeat task.wait() until player
+repeat task.wait() until player:FindFirstChild("PlayerGui")
 
-local canSetFFlag = false
-
-pcall(function()
-	setfflag("XenoCheck", "True")
-	canSetFFlag = true
-end)
-
-local function safeFFlag(name, value)
-	if canSetFFlag then
-		pcall(function()
-			setfflag(name, value)
-		end)
+--------------------------------------------------
+-- GUI PARENT (XENO SAFE)
+--------------------------------------------------
+local function getGuiParent()
+	if gethui then
+		return gethui()
 	end
+	return CoreGui
 end
 
-local function applyFFlags()
-	safeFFlag("LargeReplicatorEnabled9", "True")
-	safeFFlag("TimestepArbiterVelocityCriteriaThresholdTwoDt", "2147483646")
-	safeFFlag("S2PhysicsSenderRate", "15000")
-	safeFFlag("DisableDPIScale", "True")
-	safeFFlag("PhysicsSenderMaxBandwidthBps", "20000")
-	safeFFlag("SimOwnedNOUCountThresholdMillionth", "2147483647")
-	safeFFlag("StreamJobNOUVolumeLengthCap", "2147483647")
-	safeFFlag("NextGenReplicatorEnabledWrite4", "True")
-	safeFFlag("MaxAcceptableUpdateDelay", "1")
-end
+--------------------------------------------------
+-- GUI
+--------------------------------------------------
+local gui = Instance.new("ScreenGui")
+gui.Name = "astrxl-taxedU"
+gui.ResetOnSpawn = false
+gui.IgnoreGuiInset = true
+gui.Parent = getGuiParent()
 
-local function disableFFlags()
-	safeFFlag("LargeReplicatorEnabled9", "False")
-	safeFFlag("DisableDPIScale", "False")
-	safeFFlag("NextGenReplicatorEnabledWrite4", "False")
-	safeFFlag("S2PhysicsSenderRate", "60")
-	safeFFlag("PhysicsSenderMaxBandwidthBps", "6000")
-	safeFFlag("MaxAcceptableUpdateDelay", "8")
-end
+--------------------------------------------------
+-- MAIN FRAME
+--------------------------------------------------
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 300, 0, 230)
+frame.Position = UDim2.new(0.5, -150, 0.5, -115)
+frame.BackgroundColor3 = Color3.fromRGB(200, 170, 255)
+frame.BorderSizePixel = 0
+frame.Parent = gui
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 14)
 
--- =========================
--- UI (ANTI DUPLICATE)
--- =========================
+local stroke = Instance.new("UIStroke", frame)
+stroke.Color = Color3.fromRGB(165, 125, 225)
+stroke.Thickness = 2
 
-if LocalPlayer.PlayerGui:FindFirstChild("ArthurxDesyncGui") then
-	return
-end
+--------------------------------------------------
+-- TITLE
+--------------------------------------------------
+local header = Instance.new("TextLabel")
+header.Size = UDim2.new(1, -20, 0, 30)
+header.Position = UDim2.new(0, 10, 0, 8)
+header.BackgroundTransparency = 1
+header.Text = "astrxl-taxedU"
+header.Font = Enum.Font.GothamBold
+header.TextSize = 18
+header.TextColor3 = Color3.fromRGB(50, 20, 90)
+header.Parent = frame
 
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "ArthurxDesyncGui"
-ScreenGui.Parent = LocalPlayer.PlayerGui
-ScreenGui.ResetOnSpawn = false
+--------------------------------------------------
+-- BUTTON CREATOR
+--------------------------------------------------
+local function createButton(text, y)
+	local btn = Instance.new("TextButton")
+	btn.Size = UDim2.new(1, -30, 0, 36)
+	btn.Position = UDim2.new(0, 15, 0, y)
+	btn.Text = text
+	btn.Font = Enum.Font.GothamMedium
+	btn.TextSize = 14
+	btn.TextColor3 = Color3.fromRGB(50, 20, 90)
+	btn.BackgroundColor3 = Color3.fromRGB(230, 210, 255)
+	btn.BorderSizePixel = 0
+	btn.Parent = frame
+	Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 10)
 
-local Frame = Instance.new("Frame")
-Frame.Size = UDim2.new(0, 260, 0, 180)
-Frame.Position = UDim2.new(0.5, -130, 0.5, -90)
-Frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-Frame.BorderSizePixel = 0
-Frame.Parent = ScreenGui
-Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 12)
-
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, -20, 0, 30)
-Title.Position = UDim2.new(0, 10, 0, 10)
-Title.BackgroundTransparency = 1
-Title.Text = "Arthurx Desync (XENO)"
-Title.Font = Enum.Font.GothamBold
-Title.TextScaled = true
-Title.TextColor3 = Color3.new(1, 1, 1)
-Title.Parent = Frame
-
-local function makeButton(text, y, color)
-	local b = Instance.new("TextButton")
-	b.Size = UDim2.new(1, -20, 0, 40)
-	b.Position = UDim2.new(0, 10, 0, y)
-	b.Text = text
-	b.TextScaled = true
-	b.TextColor3 = Color3.new(1,1,1)
-	b.BackgroundColor3 = color
-	b.BorderSizePixel = 0
-	b.Parent = Frame
-	Instance.new("UICorner", b).CornerRadius = UDim.new(0, 8)
-	return b
-end
-
-local StartButton = makeButton("Start", 50, Color3.fromRGB(45,45,45))
-local DesyncButton = makeButton("Desync: OFF", 120, Color3.fromRGB(170,0,0))
-
--- =========================
--- START LOGIC
--- =========================
-
-local busy = false
-
-StartButton.MouseButton1Click:Connect(function()
-	if busy then return end
-	busy = true
-
-	local char = LocalPlayer.Character
-	if char and char:FindFirstChildOfClass("Humanoid") then
-		char:FindFirstChildOfClass("Humanoid").Health = 0
-	end
-
-	task.wait(0.5)
-
-	applyFFlags()
-
-	local newChar
-	repeat
-		newChar = LocalPlayer.Character
-		task.wait()
-	until newChar and newChar:FindFirstChild("HumanoidRootPart")
-
-	disableFFlags()
-
-	local hrp = newChar.HumanoidRootPart
-	local saved = hrp.CFrame
-	local start = os.clock()
-
-	local con
-	con = RunService.Heartbeat:Connect(function()
-		if os.clock() - start < 1.5 then
-			hrp.CFrame = saved
-		else
-			con:Disconnect()
-		end
+	btn.MouseEnter:Connect(function()
+		btn.BackgroundColor3 = Color3.fromRGB(215, 190, 250)
+	end)
+	btn.MouseLeave:Connect(function()
+		btn.BackgroundColor3 = Color3.fromRGB(230, 210, 255)
 	end)
 
-	print("[XENO] Ready")
-	busy = false
-end)
-
--- =========================
--- DESYNC TOGGLE
--- =========================
-
-local enabled = false
-
-DesyncButton.MouseButton1Click:Connect(function()
-	enabled = not enabled
-
-	if enabled then
-		applyFFlags()
-		DesyncButton.Text = "Desync: ON"
-		DesyncButton.BackgroundColor3 = Color3.fromRGB(0,200,0)
-	else
-		disableFFlags()
-		DesyncButton.Text = "Desync: OFF"
-		DesyncButton.BackgroundColor3 = Color3.fromRGB(170,0,0)
-	end
-end)
-
--- =========================
--- DRAG SUPPORT
--- =========================
-
-local dragging, dragStart, startPos, dragInput
-
-local function update(input)
-	local delta = input.Position - dragStart
-	Frame.Position = UDim2.new(
-		startPos.X.Scale, startPos.X.Offset + delta.X,
-		startPos.Y.Scale, startPos.Y.Offset + delta.Y
-	)
+	return btn
 end
 
-Frame.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1
-	or input.UserInputType == Enum.UserInputType.Touch then
+--------------------------------------------------
+-- STATE
+--------------------------------------------------
+local savedCFrame
+local tpEnabled = false
+local speedEnabled = false
+local noclipEnabled = false
+
+--------------------------------------------------
+-- BUTTONS
+--------------------------------------------------
+local setBtn    = createButton("Set Checkpoint", 50)
+local tpBtn     = createButton("Instant TP: OFF", 95)
+local speedBtn  = createButton("Speed: OFF", 140)
+local noclipBtn = createButton("Noclip: OFF", 185)
+
+--------------------------------------------------
+-- STEALTH NOCLIP
+--------------------------------------------------
+pcall(function()
+	PhysicsService:CreateCollisionGroup("NoClipGroup")
+	PhysicsService:CollisionGroupSetCollidable("NoClipGroup", "Default", false)
+end)
+
+local function setCollision(char, group)
+	for _, v in ipairs(char:GetDescendants()) do
+		if v:IsA("BasePart") then
+			pcall(function()
+				PhysicsService:SetPartCollisionGroup(v, group)
+			end)
+		end
+	end
+end
+
+RunService.Stepped:Connect(function()
+	if noclipEnabled and player.Character then
+		local hum = player.Character:FindFirstChildOfClass("Humanoid")
+		if hum then
+			hum:ChangeState(Enum.HumanoidStateType.Physics)
+		end
+	end
+end)
+
+--------------------------------------------------
+-- BUTTON LOGIC
+--------------------------------------------------
+setBtn.MouseButton1Click:Connect(function()
+	local char = player.Character
+	if char and char:FindFirstChild("HumanoidRootPart") then
+		savedCFrame = char.HumanoidRootPart.CFrame
+	end
+end)
+
+tpBtn.MouseButton1Click:Connect(function()
+	tpEnabled = not tpEnabled
+	tpBtn.Text = tpEnabled and "Instant TP: ON" or "Instant TP: OFF"
+end)
+
+speedBtn.MouseButton1Click:Connect(function()
+	speedEnabled = not speedEnabled
+	speedBtn.Text = speedEnabled and "Speed: ON" or "Speed: OFF"
+	local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+	if hum then
+		hum.WalkSpeed = speedEnabled and 32 or 16
+	end
+end)
+
+noclipBtn.MouseButton1Click:Connect(function()
+	noclipEnabled = not noclipEnabled
+	noclipBtn.Text = noclipEnabled and "Noclip: ON" or "Noclip: OFF"
+
+	local char = player.Character
+	if not char then return end
+
+	if noclipEnabled then
+		setCollision(char, "NoClipGroup")
+	else
+		setCollision(char, "Default")
+	end
+end)
+
+--------------------------------------------------
+-- INSTANT STEAL TP (4 SECOND DELAY)
+--------------------------------------------------
+ProximityPromptService.PromptButtonHoldEnded:Connect(function(prompt, who)
+	if who ~= player then return end
+	if not tpEnabled or not savedCFrame then return end
+	if prompt.Name ~= "Steal" and prompt.ActionText ~= "Steal" then return end
+
+	local char = player.Character
+	if not char then return end
+
+	local hrp = char:FindFirstChild("HumanoidRootPart")
+	if not hrp then return end
+
+	-- delayed return
+	task.spawn(function()
+		task.wait(4) -- ⏱️ delay time
+		if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+			player.Character.HumanoidRootPart.CFrame = savedCFrame
+		end
+	end)
+end)
+
+--------------------------------------------------
+-- DRAG
+--------------------------------------------------
+local dragging, dragStart, startPos
+
+frame.InputBegan:Connect(function(i)
+	if i.UserInputType == Enum.UserInputType.MouseButton1 then
 		dragging = true
-		dragStart = input.Position
-		startPos = Frame.Position
-		input.Changed:Connect(function()
-			if input.UserInputState == Enum.UserInputState.End then
-				dragging = false
-			end
-		end)
+		dragStart = i.Position
+		startPos = frame.Position
 	end
 end)
 
-Frame.InputChanged:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseMovement
-	or input.UserInputType == Enum.UserInputType.Touch then
-		dragInput = input
+frame.InputEnded:Connect(function(i)
+	if i.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = false
 	end
 end)
 
-UserInputService.InputChanged:Connect(function(input)
-	if input == dragInput and dragging then
-		update(input)
+UserInputService.InputChanged:Connect(function(i)
+	if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then
+		local delta = i.Position - dragStart
+		frame.Position = UDim2.new(
+			startPos.X.Scale,
+			startPos.X.Offset + delta.X,
+			startPos.Y.Scale,
+			startPos.Y.Offset + delta.Y
+		)
 	end
 end)
