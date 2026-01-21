@@ -1,0 +1,76 @@
+-- =========================
+-- XENO NO-TOOL DESYNC
+-- Game: Steal a Brainrot
+-- =========================
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local lp = Players.LocalPlayer
+local desync = false
+local conn
+
+-- SETTINGS (safe for SAB)
+local VELOCITY_POWER = 65
+local JITTER = 0.08
+
+local function getHRP()
+	local char = lp.Character
+	if char then
+		return char:FindFirstChild("HumanoidRootPart")
+	end
+end
+
+local function startDesync()
+	if conn then return end
+
+	conn = RunService.Heartbeat:Connect(function()
+		local hrp = getHRP()
+		if not hrp then return end
+
+		-- fake velocity
+		hrp.Velocity =
+			Vector3.new(
+				math.random(-VELOCITY_POWER, VELOCITY_POWER),
+				math.random(-2, 2),
+				math.random(-VELOCITY_POWER, VELOCITY_POWER)
+			)
+
+		-- micro position jitter (below snap threshold)
+		hrp.CFrame =
+			hrp.CFrame *
+			CFrame.new(
+				math.random(-100,100)/100 * JITTER,
+				0,
+				math.random(-100,100)/100 * JITTER
+			)
+	end)
+end
+
+local function stopDesync()
+	if conn then
+		conn:Disconnect()
+		conn = nil
+	end
+
+	local hrp = getHRP()
+	if hrp then
+		hrp.Velocity = Vector3.zero
+	end
+end
+
+-- TOGGLE (press Z)
+game:GetService("UserInputService").InputBegan:Connect(function(input, gpe)
+	if gpe then return end
+	if input.KeyCode == Enum.KeyCode.Z then
+		desync = not desync
+
+		if desync then
+			startDesync()
+			warn("[XENO] Desync ON")
+		else
+			stopDesync()
+			warn("[XENO] Desync OFF")
+		end
+	end
+end)
