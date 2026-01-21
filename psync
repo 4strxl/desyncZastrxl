@@ -1,76 +1,201 @@
 -- =========================
--- XENO NO-TOOL DESYNC
--- Game: Steal a Brainrot
+-- SERVICES
 -- =========================
 
 local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 
-local lp = Players.LocalPlayer
-local desync = false
-local conn
+-- =========================
+-- SAFE FFLAG SYSTEM (XENO FIX)
+-- =========================
 
--- SETTINGS (safe for SAB)
-local VELOCITY_POWER = 65
-local JITTER = 0.08
+local canSetFFlag = false
 
-local function getHRP()
-	local char = lp.Character
-	if char then
-		return char:FindFirstChild("HumanoidRootPart")
+pcall(function()
+	setfflag("XenoCheck", "True")
+	canSetFFlag = true
+end)
+
+local function safeFFlag(name, value)
+	if canSetFFlag then
+		pcall(function()
+			setfflag(name, value)
+		end)
 	end
 end
 
-local function startDesync()
-	if conn then return end
-
-	conn = RunService.Heartbeat:Connect(function()
-		local hrp = getHRP()
-		if not hrp then return end
-
-		-- fake velocity
-		hrp.Velocity =
-			Vector3.new(
-				math.random(-VELOCITY_POWER, VELOCITY_POWER),
-				math.random(-2, 2),
-				math.random(-VELOCITY_POWER, VELOCITY_POWER)
-			)
-
-		-- micro position jitter (below snap threshold)
-		hrp.CFrame =
-			hrp.CFrame *
-			CFrame.new(
-				math.random(-100,100)/100 * JITTER,
-				0,
-				math.random(-100,100)/100 * JITTER
-			)
-	end)
+local function applyFFlags()
+	safeFFlag("LargeReplicatorEnabled9", "True")
+	safeFFlag("TimestepArbiterVelocityCriteriaThresholdTwoDt", "2147483646")
+	safeFFlag("S2PhysicsSenderRate", "15000")
+	safeFFlag("DisableDPIScale", "True")
+	safeFFlag("PhysicsSenderMaxBandwidthBps", "20000")
+	safeFFlag("SimOwnedNOUCountThresholdMillionth", "2147483647")
+	safeFFlag("StreamJobNOUVolumeLengthCap", "2147483647")
+	safeFFlag("NextGenReplicatorEnabledWrite4", "True")
+	safeFFlag("MaxAcceptableUpdateDelay", "1")
 end
 
-local function stopDesync()
-	if conn then
-		conn:Disconnect()
-		conn = nil
-	end
-
-	local hrp = getHRP()
-	if hrp then
-		hrp.Velocity = Vector3.zero
-	end
+local function disableFFlags()
+	safeFFlag("LargeReplicatorEnabled9", "False")
+	safeFFlag("DisableDPIScale", "False")
+	safeFFlag("NextGenReplicatorEnabledWrite4", "False")
+	safeFFlag("S2PhysicsSenderRate", "60")
+	safeFFlag("PhysicsSenderMaxBandwidthBps", "6000")
+	safeFFlag("MaxAcceptableUpdateDelay", "8")
 end
 
--- TOGGLE (press Z)
-game:GetService("UserInputService").InputBegan:Connect(function(input, gpe)
-	if gpe then return end
-	if input.KeyCode == Enum.KeyCode.Z then
-		desync = not desync
+-- =========================
+-- UI (ANTI DUPLICATE)
+-- =========================
 
-		if desync then
-			startDesync()
-			warn("[XENO] Desync ON")
+if LocalPlayer.PlayerGui:FindFirstChild("ArthurxDesyncGui") then
+	return
+end
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "ArthurxDesyncGui"
+ScreenGui.Parent = LocalPlayer.PlayerGui
+ScreenGui.ResetOnSpawn = false
+
+local Frame = Instance.new("Frame")
+Frame.Size = UDim2.new(0, 260, 0, 180)
+Frame.Position = UDim2.new(0.5, -130, 0.5, -90)
+Frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+Frame.BorderSizePixel = 0
+Frame.Parent = ScreenGui
+Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 12)
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, -20, 0, 30)
+Title.Position = UDim2.new(0, 10, 0, 10)
+Title.BackgroundTransparency = 1
+Title.Text = "Arthurx Desync (XENO)"
+Title.Font = Enum.Font.GothamBold
+Title.TextScaled = true
+Title.TextColor3 = Color3.new(1, 1, 1)
+Title.Parent = Frame
+
+local function makeButton(text, y, color)
+	local b = Instance.new("TextButton")
+	b.Size = UDim2.new(1, -20, 0, 40)
+	b.Position = UDim2.new(0, 10, 0, y)
+	b.Text = text
+	b.TextScaled = true
+	b.TextColor3 = Color3.new(1,1,1)
+	b.BackgroundColor3 = color
+	b.BorderSizePixel = 0
+	b.Parent = Frame
+	Instance.new("UICorner", b).CornerRadius = UDim.new(0, 8)
+	return b
+end
+
+local StartButton = makeButton("Start", 50, Color3.fromRGB(45,45,45))
+local DesyncButton = makeButton("Desync: OFF", 120, Color3.fromRGB(170,0,0))
+
+-- =========================
+-- START LOGIC
+-- =========================
+
+local busy = false
+
+StartButton.MouseButton1Click:Connect(function()
+	if busy then return end
+	busy = true
+
+	local char = LocalPlayer.Character
+	if char and char:FindFirstChildOfClass("Humanoid") then
+		char:FindFirstChildOfClass("Humanoid").Health = 0
+	end
+
+	task.wait(0.5)
+
+	applyFFlags()
+
+	local newChar
+	repeat
+		newChar = LocalPlayer.Character
+		task.wait()
+	until newChar and newChar:FindFirstChild("HumanoidRootPart")
+
+	disableFFlags()
+
+	local hrp = newChar.HumanoidRootPart
+	local saved = hrp.CFrame
+	local start = os.clock()
+
+	local con
+	con = RunService.Heartbeat:Connect(function()
+		if os.clock() - start < 1.5 then
+			hrp.CFrame = saved
 		else
-			stopDesync()
-			warn("[XENO] Desync OFF")
+			con:Disconnect()
 		end
+	end)
+
+	print("[XENO] Ready")
+	busy = false
+end)
+
+-- =========================
+-- DESYNC TOGGLE
+-- =========================
+
+local enabled = false
+
+DesyncButton.MouseButton1Click:Connect(function()
+	enabled = not enabled
+
+	if enabled then
+		applyFFlags()
+		DesyncButton.Text = "Desync: ON"
+		DesyncButton.BackgroundColor3 = Color3.fromRGB(0,200,0)
+	else
+		disableFFlags()
+		DesyncButton.Text = "Desync: OFF"
+		DesyncButton.BackgroundColor3 = Color3.fromRGB(170,0,0)
+	end
+end)
+
+-- =========================
+-- DRAG SUPPORT
+-- =========================
+
+local dragging, dragStart, startPos, dragInput
+
+local function update(input)
+	local delta = input.Position - dragStart
+	Frame.Position = UDim2.new(
+		startPos.X.Scale, startPos.X.Offset + delta.X,
+		startPos.Y.Scale, startPos.Y.Offset + delta.Y
+	)
+end
+
+Frame.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1
+	or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = true
+		dragStart = input.Position
+		startPos = Frame.Position
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then
+				dragging = false
+			end
+		end)
+	end
+end)
+
+Frame.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseMovement
+	or input.UserInputType == Enum.UserInputType.Touch then
+		dragInput = input
+	end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+	if input == dragInput and dragging then
+		update(input)
 	end
 end)
