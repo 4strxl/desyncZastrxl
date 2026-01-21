@@ -1,0 +1,147 @@
+-- astrxl-taxedU
+-- light purple edition
+-- XENO safe
+-- delayed 4-second return after Instant Steal
+
+repeat task.wait() until game:IsLoaded()
+
+local Players = game:GetService("Players")
+local ProximityPromptService = game:GetService("ProximityPromptService")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local PhysicsService = game:GetService("PhysicsService")
+local CoreGui = game:GetService("CoreGui")
+
+local player = Players.LocalPlayer
+repeat task.wait() until player
+repeat task.wait() until player:FindFirstChild("PlayerGui")
+
+--------------------------------------------------
+-- GUI PARENT (XENO SAFE)
+--------------------------------------------------
+local function getGuiParent()
+	if gethui then
+		return gethui()
+	end
+	return CoreGui
+end
+
+--------------------------------------------------
+-- GUI
+--------------------------------------------------
+local gui = Instance.new("ScreenGui")
+gui.Name = "astrxl-taxedU"
+gui.ResetOnSpawn = false
+gui.IgnoreGuiInset = true
+gui.Parent = getGuiParent()
+
+--------------------------------------------------
+-- MAIN FRAME
+--------------------------------------------------
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 300, 0, 230)
+frame.Position = UDim2.new(0.5, -150, 0.5, -115)
+frame.BackgroundColor3 = Color3.fromRGB(200, 170, 255)
+frame.BorderSizePixel = 0
+frame.Parent = gui
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 14)
+
+local stroke = Instance.new("UIStroke", frame)
+stroke.Color = Color3.fromRGB(165, 125, 225)
+stroke.Thickness = 2
+
+--------------------------------------------------
+-- TITLE
+--------------------------------------------------
+local header = Instance.new("TextLabel")
+header.Size = UDim2.new(1, -20, 0, 30)
+header.Position = UDim2.new(0, 10, 0, 8)
+header.BackgroundTransparency = 1
+header.Text = "astrxl-taxedU"
+header.Font = Enum.Font.GothamBold
+header.TextSize = 18
+header.TextColor3 = Color3.fromRGB(50, 20, 90)
+header.Parent = frame
+
+--------------------------------------------------
+-- BUTTON CREATOR
+--------------------------------------------------
+local function createButton(text, y)
+	local btn = Instance.new("TextButton")
+	btn.Size = UDim2.new(1, -30, 0, 36)
+	btn.Position = UDim2.new(0, 15, 0, y)
+	btn.Text = text
+	btn.Font = Enum.Font.GothamMedium
+	btn.TextSize = 14
+	btn.TextColor3 = Color3.fromRGB(50, 20, 90)
+	btn.BackgroundColor3 = Color3.fromRGB(230, 210, 255)
+	btn.BorderSizePixel = 0
+	btn.Parent = frame
+	Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 10)
+
+	btn.MouseEnter:Connect(function()
+		btn.BackgroundColor3 = Color3.fromRGB(215, 190, 250)
+	end)
+	btn.MouseLeave:Connect(function()
+		btn.BackgroundColor3 = Color3.fromRGB(230, 210, 255)
+	end)
+
+	return btn
+end
+
+--------------------------------------------------
+-- STATE
+--------------------------------------------------
+local savedCFrame
+local tpEnabled = false
+local speedEnabled = false
+local noclipEnabled = false
+
+--------------------------------------------------
+-- BUTTONS
+--------------------------------------------------
+local setBtn    = createButton("Set Checkpoint", 50)
+local tpBtn     = createButton("Instant TP: OFF", 95)
+local speedBtn  = createButton("Speed: OFF", 140)
+local noclipBtn = createButton("Noclip: OFF", 185)
+
+--------------------------------------------------
+-- STEALTH NOCLIP
+--------------------------------------------------
+pcall(function()
+	PhysicsService:CreateCollisionGroup("NoClipGroup")
+	PhysicsService:CollisionGroupSetCollidable("NoClipGroup", "Default", false)
+end)
+
+local function setCollision(char, group)
+	for _, v in ipairs(char:GetDescendants()) do
+		if v:IsA("BasePart") then
+			pcall(function()
+				PhysicsService:SetPartCollisionGroup(v, group)
+			end)
+		end
+	end
+end
+
+RunService.Stepped:Connect(function()
+	if noclipEnabled and player.Character then
+		local hum = player.Character:FindFirstChildOfClass("Humanoid")
+		if hum then
+			hum:ChangeState(Enum.HumanoidStateType.Physics)
+		end
+	end
+end)
+
+--------------------------------------------------
+-- BUTTON LOGIC
+--------------------------------------------------
+setBtn.MouseButton1Click:Connect(function()
+	local char = player.Character
+	if char and char:FindFirstChild("HumanoidRootPart") then
+		savedCFrame = char.HumanoidRootPart.CFrame
+	end
+end)
+
+tpBtn.MouseButton1Click:Connect(function()
+	tpEnabled = not tpEnabled
+	tpBtn.Text = tpEnabled and
