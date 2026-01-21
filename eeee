@@ -1,0 +1,222 @@
+-- astrxl-taxedU
+-- light purple edition
+-- XENO safe
+-- delayed 4-second return after Instant Steal
+
+local Players = game:GetService("Players")
+local ProximityPromptService = game:GetService("ProximityPromptService")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local PhysicsService = game:GetService("PhysicsService")
+
+local player = Players.LocalPlayer
+
+-- wait for PlayerGui safely
+local function getPlayerGui()
+	repeat task.wait() until player and player:FindFirstChild("PlayerGui")
+	return player.PlayerGui
+end
+
+local guiParent = getPlayerGui()
+
+-- XENO safe: use gethui() if available
+if gethui then
+	pcall(function()
+		guiParent = gethui()
+	end)
+end
+
+--------------------------------------------------
+-- GUI
+--------------------------------------------------
+local gui = Instance.new("ScreenGui")
+gui.Name = "astrxl-taxedU"
+gui.ResetOnSpawn = false
+gui.IgnoreGuiInset = true
+gui.Parent = guiParent
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 300, 0, 230)
+frame.Position = UDim2.new(0.5, -150, 0.5, -115)
+frame.BackgroundColor3 = Color3.fromRGB(200, 170, 255) -- light purple
+frame.BorderSizePixel = 0
+frame.Parent = gui
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 14)
+
+local stroke = Instance.new("UIStroke", frame)
+stroke.Color = Color3.fromRGB(165, 125, 225)
+stroke.Thickness = 2
+
+local header = Instance.new("TextLabel")
+header.Size = UDim2.new(1, -20, 0, 30)
+header.Position = UDim2.new(0, 10, 0, 8)
+header.BackgroundTransparency = 1
+header.Text = "astrxl-taxedU"
+header.Font = Enum.Font.GothamBold
+header.TextSize = 18
+header.TextColor3 = Color3.fromRGB(50, 20, 90)
+header.Parent = frame
+
+--------------------------------------------------
+-- BUTTON CREATOR
+--------------------------------------------------
+local function createButton(text, y)
+	local btn = Instance.new("TextButton")
+	btn.Size = UDim2.new(1, -30, 0, 36)
+	btn.Position = UDim2.new(0, 15, 0, y)
+	btn.Text = text
+	btn.Font = Enum.Font.GothamMedium
+	btn.TextSize = 14
+	btn.TextColor3 = Color3.fromRGB(50, 20, 90)
+	btn.BackgroundColor3 = Color3.fromRGB(230, 210, 255)
+	btn.BorderSizePixel = 0
+	btn.Parent = frame
+	Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 10)
+
+	btn.MouseEnter:Connect(function()
+		btn.BackgroundColor3 = Color3.fromRGB(215, 190, 250)
+	end)
+	btn.MouseLeave:Connect(function()
+		btn.BackgroundColor3 = Color3.fromRGB(230, 210, 255)
+	end)
+
+	return btn
+end
+
+--------------------------------------------------
+-- STATE
+--------------------------------------------------
+local savedCFrame
+local tpEnabled = false
+local speedEnabled = false
+local noclipEnabled = false
+
+--------------------------------------------------
+-- BUTTONS
+--------------------------------------------------
+local setBtn    = createButton("Set Checkpoint", 50)
+local tpBtn     = createButton("Instant TP: OFF", 95)
+local speedBtn  = createButton("Speed: OFF", 140)
+local noclipBtn = createButton("Noclip: OFF", 185)
+
+--------------------------------------------------
+-- STEALTH NOCLIP
+--------------------------------------------------
+pcall(function()
+	PhysicsService:CreateCollisionGroup("NoClipGroup")
+	PhysicsService:CollisionGroupSetCollidable("NoClipGroup", "Default", false)
+end)
+
+local function setCollision(char, group)
+	for _, v in ipairs(char:GetDescendants()) do
+		if v:IsA("BasePart") then
+			pcall(function()
+				PhysicsService:SetPartCollisionGroup(v, group)
+			end)
+		end
+	end
+end
+
+RunService.Stepped:Connect(function()
+	if noclipEnabled and player.Character then
+		local hum = player.Character:FindFirstChildOfClass("Humanoid")
+		if hum then
+			hum:ChangeState(Enum.HumanoidStateType.Physics)
+		end
+	end
+end)
+
+--------------------------------------------------
+-- BUTTON LOGIC
+--------------------------------------------------
+setBtn.MouseButton1Click:Connect(function()
+	local char = player.Character
+	if char and char:FindFirstChild("HumanoidRootPart") then
+		savedCFrame = char.HumanoidRootPart.CFrame
+	end
+end)
+
+tpBtn.MouseButton1Click:Connect(function()
+	tpEnabled = not tpEnabled
+	tpBtn.Text = tpEnabled and "Instant TP: ON" or "Instant TP: OFF"
+end)
+
+speedBtn.MouseButton1Click:Connect(function()
+	speedEnabled = not speedEnabled
+	speedBtn.Text = speedEnabled and "Speed: ON" or "Speed: OFF"
+	local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+	if hum then
+		hum.WalkSpeed = speedEnabled and 32 or 16
+	end
+end)
+
+noclipBtn.MouseButton1Click:Connect(function()
+	noclipEnabled = not noclipEnabled
+	noclipBtn.Text = noclipEnabled and "Noclip: ON" or "Noclip: OFF"
+
+	local char = player.Character
+	if not char then return end
+
+	if noclipEnabled then
+		setCollision(char, "NoClipGroup")
+	else
+		setCollision(char, "Default")
+	end
+end)
+
+--------------------------------------------------
+-- INSTANT STEAL TP (4s DELAYED RETURN)
+--------------------------------------------------
+ProximityPromptService.PromptButtonHoldEnded:Connect(function(prompt, who)
+	if who ~= player then return end
+	if not tpEnabled or not savedCFrame then return end
+	if prompt.Name ~= "Steal" and prompt.ActionText ~= "Steal" then return end
+
+	local char = player.Character
+	if not char then return end
+
+	local hrp = char:FindFirstChild("HumanoidRootPart")
+	if not hrp then return end
+
+	-- stay at steal location immediately
+	local stealCFrame = hrp.CFrame
+
+	-- teleport back after 4 seconds
+	task.spawn(function()
+		task.wait(4)
+		if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+			player.Character.HumanoidRootPart.CFrame = savedCFrame
+		end
+	end)
+end)
+
+--------------------------------------------------
+-- DRAG
+--------------------------------------------------
+local dragging, dragStart, startPos
+
+frame.InputBegan:Connect(function(i)
+	if i.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = true
+		dragStart = i.Position
+		startPos = frame.Position
+	end
+end)
+
+frame.InputEnded:Connect(function(i)
+	if i.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = false
+	end
+end)
+
+UserInputService.InputChanged:Connect(function(i)
+	if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then
+		local delta = i.Position - dragStart
+		frame.Position = UDim2.new(
+			startPos.X.Scale,
+			startPos.X.Offset + delta.X,
+			startPos.Y.Scale,
+			startPos.Y.Offset + delta.Y
+		)
+	end
+end)
